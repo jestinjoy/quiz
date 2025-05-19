@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-export default function QuizList({ studentId, onSelectQuiz }) {
+export default function QuizList({ studentId, onSelectQuiz, onViewSummary }) {
   const [quizzes, setQuizzes] = useState({
     active: [],
     upcoming: [],
@@ -51,8 +51,11 @@ const renderQuizCard = (quiz, type) => (
       <>
         <p><strong>Your Score:</strong> {quiz.score}</p>
         {quiz.position && (
-          <p><strong>Your Rank:</strong> {quiz.position}</p>
+          <p><strong>Your Position:</strong> {quiz.position}</p>
         )}
+        <button onClick={() => onViewSummary(quiz.quiz_id)}>
+          More
+        </button>
       </>
     )}
 

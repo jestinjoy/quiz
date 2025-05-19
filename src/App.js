@@ -1,17 +1,21 @@
 import React, { useState } from "react";
 import QuizList from "./QuizList";
-import QuizAttempt from "./QuizAttempt";
+import QuizSummary from "./QuizSummary";
 
 function App() {
   const [selectedQuizId, setSelectedQuizId] = useState(null);
-  const studentId = 5;
+  const studentId = 5; // Example student ID
 
   return (
     <div className="App">
-      {!selectedQuizId ? (
-        <QuizList studentId={studentId} onSelectQuiz={setSelectedQuizId} />
+      {selectedQuizId ? (
+        <QuizSummary
+          quizId={selectedQuizId}
+          studentId={studentId}
+          onBack={() => setSelectedQuizId(null)}
+        />
       ) : (
-        <QuizAttempt quizId={selectedQuizId} studentId={studentId} />
+        <QuizList studentId={studentId} onViewSummary={setSelectedQuizId} />
       )}
     </div>
   );
