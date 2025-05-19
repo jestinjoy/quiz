@@ -1,23 +1,18 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState } from "react";
+import QuizList from "./QuizList";
+import QuizAttempt from "./QuizAttempt";
 
 function App() {
+  const [selectedQuizId, setSelectedQuizId] = useState(null);
+  const studentId = 5;
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      {!selectedQuizId ? (
+        <QuizList studentId={studentId} onSelectQuiz={setSelectedQuizId} />
+      ) : (
+        <QuizAttempt quizId={selectedQuizId} studentId={studentId} />
+      )}
     </div>
   );
 }
