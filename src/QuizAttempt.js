@@ -5,22 +5,21 @@ export default function QuizAttempt({ quizId, studentId }) {
   const [quiz, setQuiz] = useState(null);
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false); // ✅ new
   const [score, setScore] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
 
-  // Fetch quiz
   useEffect(() => {
     axios.get(`http://localhost:8000/quiz/${quizId}/questions`)
       .then(res => {
         setQuiz(res.data);
-        setTimeLeft(res.data.duration_minutes * 60); // convert minutes to seconds
+        setTimeLeft(res.data.duration_minutes * 60);
       })
       .catch(err => {
         console.error("Failed to load quiz", err);
       });
   }, [quizId]);
 
-  // Timer effect
   useEffect(() => {
     if (!quiz || submitted) return;
 
@@ -28,7 +27,7 @@ export default function QuizAttempt({ quizId, studentId }) {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(interval);
-          handleSubmit();  // auto-submit
+          handleSubmit(); // ✅ auto-submit
           return 0;
         }
         return prev - 1;
@@ -38,7 +37,6 @@ export default function QuizAttempt({ quizId, studentId }) {
     return () => clearInterval(interval);
   }, [quiz, submitted]);
 
-  // Format seconds to MM:SS
   const formatTime = (secs) => {
     const m = String(Math.floor(secs / 60)).padStart(2, '0');
     const s = String(secs % 60).padStart(2, '0');
@@ -49,20 +47,25 @@ export default function QuizAttempt({ quizId, studentId }) {
     setAnswers({ ...answers, [questionId]: value });
   };
 
-  const handleSubmit = () => {
-    if (submitted) return; // prevent multiple submissions
-    axios.post("http://localhost:8000/submit_quiz", {
-      quiz_id: quizId,
-      student_id: studentId,
-      answers: answers
-    })
-      .then(res => {
-        setSubmitted(true);
-        setScore(res.data.score);
-      })
-      .catch(err => {
-        alert(err.response?.data?.detail || "Submission failed");
+  const handleSubmit = async () => {
+    if (submitted || submitting) return; // ✅ prevent double submission
+
+    setSubmitting(true); // ✅ lock the form
+
+    try {
+      const res = await axios.post("http://localhost:8000/submit_quiz", {
+        quiz_id: quizId,
+        student_id: studentId,
+        answers: answers
       });
+
+      setSubmitted(true);
+      setScore(res.data.score);
+    } catch (err) {
+      alert(err.response?.data?.detail || "Submission failed");
+    } finally {
+      setSubmitting(false); // ✅ release the lock
+    }
   };
 
   if (!quiz) return <p>Loading quiz...</p>;
@@ -124,7 +127,9 @@ export default function QuizAttempt({ quizId, studentId }) {
       ))}
 
       {!submitted ? (
-        <button onClick={handleSubmit}>Submit Quiz</button>
+        <button onClick={handleSubmit} disabled={submitting}>
+          {submitting ? "Submitting..." : "Submit Quiz"}
+        </button>
       ) : (
         <h3>Your Score: {score}</h3>
       )}
