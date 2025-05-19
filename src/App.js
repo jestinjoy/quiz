@@ -1,23 +1,34 @@
 import React, { useState } from "react";
 import QuizList from "./QuizList";
+import QuizAttempt from "./QuizAttempt";
 import QuizSummary from "./QuizSummary";
 
 function App() {
-  const [selectedQuizId, setSelectedQuizId] = useState(null);
-  const studentId = 5; // Example student ID
+  const [currentQuizId, setCurrentQuizId] = useState(null);
+  const [viewSummaryQuizId, setViewSummaryQuizId] = useState(null);
+
+  const studentId = 5; // You can replace this with login-based ID later
+
+  if (currentQuizId !== null) {
+    return <QuizAttempt quizId={currentQuizId} studentId={studentId} />;
+  }
+
+  if (viewSummaryQuizId !== null) {
+    return (
+      <QuizSummary
+        quizId={viewSummaryQuizId}
+        studentId={studentId}
+        onBack={() => setViewSummaryQuizId(null)}
+      />
+    );
+  }
 
   return (
-    <div className="App">
-      {selectedQuizId ? (
-        <QuizSummary
-          quizId={selectedQuizId}
-          studentId={studentId}
-          onBack={() => setSelectedQuizId(null)}
-        />
-      ) : (
-        <QuizList studentId={studentId} onViewSummary={setSelectedQuizId} />
-      )}
-    </div>
+    <QuizList
+      studentId={studentId}
+      onSelectQuiz={(quizId) => setCurrentQuizId(quizId)}
+      onViewSummary={(quizId) => setViewSummaryQuizId(quizId)}
+    />
   );
 }
 
