@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-export default function QuizAttempt({ quizId, studentId }) {
+export default function QuizAttempt({ quizId, studentId, onBack }) {
+
   const [quiz, setQuiz] = useState(null);
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
@@ -126,13 +127,17 @@ export default function QuizAttempt({ quizId, studentId }) {
         </div>
       ))}
 
-      {!submitted ? (
-        <button onClick={handleSubmit} disabled={submitting}>
-          {submitting ? "Submitting..." : "Submit Quiz"}
-        </button>
-      ) : (
-        <h3>Your Score: {score}</h3>
-      )}
+{!submitted ? (
+  <button onClick={handleSubmit} disabled={submitting}>
+    {submitting ? "Submitting..." : "Submit Quiz"}
+  </button>
+) : (
+  <>
+    <h3>Your Score: {score}</h3>
+    <button onClick={onBack}>⬅ Back to Home</button>
+  </>
+)}
+
     </div>
   );
 }

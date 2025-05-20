@@ -10,8 +10,15 @@ function App() {
   const studentId = 5; // You can replace this with login-based ID later
 
   if (currentQuizId !== null) {
-    return <QuizAttempt quizId={currentQuizId} studentId={studentId} />;
+    return (
+      <QuizAttempt
+        quizId={currentQuizId}
+        studentId={studentId}
+        onBack={() => setCurrentQuizId(null)} // ✅ add this
+      />
+    );
   }
+
 
   if (viewSummaryQuizId !== null) {
     return (
