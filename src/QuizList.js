@@ -29,7 +29,7 @@ const renderQuizCard = (quiz, type) => (
       backgroundColor:
         type === "completed" ? "#f0f0f0" :
         type === "active" ? "#e7f7ed" :
-        "#fff7e6"
+        "#fff7e7"
     }}
   >
     <h4>{quiz.title}</h4>
