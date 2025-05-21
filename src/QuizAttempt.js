@@ -1,12 +1,51 @@
 import React, { useEffect, useState } from "react";
+import { InlineMath } from "react-katex";
+import "katex/dist/katex.min.css";
 import axios from "axios";
 
-export default function QuizAttempt({ quizId, studentId, onBack }) {
+// Split text and math (<math>...</math>) blocks
+const splitTextWithMath = (text) => {
+  const regex = /<math>(.*?)<\/math>/gs;
+  let parts = [];
+  let lastIndex = 0;
+  const matches = [...text.matchAll(regex)];
 
+  for (let match of matches) {
+    const [fullMatch, latexContent] = match;
+    const index = match.index;
+
+    if (index > lastIndex) {
+      parts.push({ type: "text", content: text.slice(lastIndex, index) });
+    }
+
+    parts.push({ type: "math", content: latexContent });
+    lastIndex = index + fullMatch.length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push({ type: "text", content: text.slice(lastIndex) });
+  }
+
+  return parts;
+};
+
+// Render mixed content with inline LaTeX
+const renderWithMath = (text) => {
+  const parts = splitTextWithMath(text);
+  return parts.map((part, idx) =>
+    part.type === "math" ? (
+      <InlineMath key={idx}>{part.content}</InlineMath>
+    ) : (
+      <span key={idx} style={{ whiteSpace: "pre-wrap" }}>{part.content}</span>
+    )
+  );
+};
+
+export default function QuizAttempt({ quizId, studentId, onBack }) {
   const [quiz, setQuiz] = useState(null);
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false); // ✅ new
+  const [submitting, setSubmitting] = useState(false);
   const [score, setScore] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
 
@@ -28,7 +67,7 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(interval);
-          handleSubmit(); // ✅ auto-submit
+          handleSubmit(); // auto-submit
           return 0;
         }
         return prev - 1;
@@ -49,30 +88,28 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
   };
 
   const handleSubmit = async () => {
-    if (submitted || submitting) return; // ✅ prevent double submission
+    if (submitted || submitting) return;
 
-    setSubmitting(true); // ✅ lock the form
-
+    setSubmitting(true);
     try {
       const res = await axios.post("http://localhost:8000/submit_quiz", {
         quiz_id: quizId,
         student_id: studentId,
         answers: answers
       });
-
       setSubmitted(true);
       setScore(res.data.score);
     } catch (err) {
       alert(err.response?.data?.detail || "Submission failed");
     } finally {
-      setSubmitting(false); // ✅ release the lock
+      setSubmitting(false);
     }
   };
 
   if (!quiz) return <p>Loading quiz...</p>;
 
   return (
-    <div style={{ maxWidth: "600px", margin: "auto" }}>
+    <div style={{ maxWidth: "700px", margin: "auto" }}>
       <h2>{quiz.title}</h2>
       <p><strong>Time Left:</strong> {formatTime(timeLeft)}</p>
       <p><strong>Duration:</strong> {quiz.duration_minutes} minutes</p>
@@ -80,7 +117,7 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
 
       {quiz.questions.map((q, index) => (
         <div key={q.question_id} style={{ marginBottom: "20px" }}>
-          <p><strong>Q{index + 1}:</strong> {q.question_text}</p>
+          <p><strong>Q{index + 1}:</strong> {renderWithMath(q.question_text)}</p>
 
           {(q.question_type === "MCQ" || q.question_type === "TRUE_FALSE") &&
             q.options.map((opt, i) => (
@@ -92,7 +129,7 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
                   onChange={() => handleChange(q.question_id, opt.text)}
                   checked={answers[q.question_id] === opt.text}
                 />
-                {opt.text}
+                {renderWithMath(opt.text)}
                 <br />
               </label>
             ))
@@ -119,7 +156,7 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
                     JSON.parse(answers[q.question_id]).includes(opt.text)
                   }
                 />
-                {opt.text}
+                {renderWithMath(opt.text)}
                 <br />
               </label>
             ))
@@ -127,17 +164,16 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
         </div>
       ))}
 
-{!submitted ? (
-  <button onClick={handleSubmit} disabled={submitting}>
-    {submitting ? "Submitting..." : "Submit Quiz"}
-  </button>
-) : (
-  <>
-    <h3>Your Score: {score}</h3>
-    <button onClick={onBack}>⬅ Back to Home</button>
-  </>
-)}
-
+      {!submitted ? (
+        <button onClick={handleSubmit} disabled={submitting}>
+          {submitting ? "Submitting..." : "Submit Quiz"}
+        </button>
+      ) : (
+        <>
+          <h3>Your Score: {score}</h3>
+          <button onClick={onBack}>⬅ Back to Home</button>
+        </>
+      )}
     </div>
   );
 }

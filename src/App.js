@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import 'katex/dist/katex.min.css';
 import QuizList from "./QuizList";
 import QuizAttempt from "./QuizAttempt";
 import QuizSummary from "./QuizSummary";

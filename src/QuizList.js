@@ -47,9 +47,11 @@ const renderQuizCard = (quiz, type) => (
     <p><strong>Duration:</strong> {quiz.duration_minutes} mins</p>
     <p><strong>Marks:</strong> {quiz.total_marks}</p>
 
-    {type === "completed" && (
+    {quiz.status === "COMPLETED" && (
       <>
-        <p><strong>Your Score:</strong> {quiz.score}</p>
+        {quiz.score !== null && (
+          <p><strong>Your Score:</strong> {quiz.score}</p>
+        )}
         {quiz.position && (
           <p><strong>Your Position:</strong> {quiz.position}</p>
         )}
@@ -58,6 +60,7 @@ const renderQuizCard = (quiz, type) => (
         </button>
       </>
     )}
+
 
     {type === "active" && (
       <button onClick={() => onSelectQuiz(quiz.quiz_id)}>
