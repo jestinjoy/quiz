@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { InlineMath } from "react-katex";
 import "katex/dist/katex.min.css";
 import axios from "axios";
@@ -49,6 +49,25 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
   const [score, setScore] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
 
+  const handleSubmit = useCallback(async () => {
+    if (submitted || submitting) return;
+
+    setSubmitting(true);
+    try {
+      const res = await axios.post("http://localhost:8000/submit_quiz", {
+        quiz_id: quizId,
+        student_id: studentId,
+        answers: answers
+      });
+      setSubmitted(true);
+      setScore(res.data.score);
+    } catch (err) {
+      alert(err.response?.data?.detail || "Submission failed");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [submitted, submitting, quizId, studentId, answers]);
+
   useEffect(() => {
     axios.get(`http://localhost:8000/quiz/${quizId}/questions`)
       .then(res => {
@@ -75,7 +94,7 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [quiz, submitted]);
+  }, [quiz, submitted, handleSubmit]);
 
   const formatTime = (secs) => {
     const m = String(Math.floor(secs / 60)).padStart(2, '0');
@@ -87,41 +106,30 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
     setAnswers({ ...answers, [questionId]: value });
   };
 
-  const handleSubmit = async () => {
-    if (submitted || submitting) return;
-
-    setSubmitting(true);
-    try {
-      const res = await axios.post("http://localhost:8000/submit_quiz", {
-        quiz_id: quizId,
-        student_id: studentId,
-        answers: answers
-      });
-      setSubmitted(true);
-      setScore(res.data.score);
-    } catch (err) {
-      alert(err.response?.data?.detail || "Submission failed");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   if (!quiz) return <p>Loading quiz...</p>;
 
   return (
-    <div style={{ maxWidth: "700px", margin: "auto" }}>
-      <h2>{quiz.title}</h2>
+    <div style={{
+      maxWidth: "700px",
+      margin: "auto",
+      padding: "20px",
+      fontFamily: "sans-serif",
+      backgroundColor: "#f9f9f9",
+      borderRadius: "10px",
+      boxShadow: "0 0 10px rgba(0,0,0,0.1)"
+    }}>
+      <h2 style={{ textAlign: "center" }}>{quiz.title}</h2>
       <p><strong>Time Left:</strong> {formatTime(timeLeft)}</p>
       <p><strong>Duration:</strong> {quiz.duration_minutes} minutes</p>
       <p><strong>Total Marks:</strong> {quiz.total_marks}</p>
 
       {quiz.questions.map((q, index) => (
-        <div key={q.question_id} style={{ marginBottom: "20px" }}>
-          <p><strong>Q{index + 1}:</strong> {renderWithMath(q.question_text)}</p>
+        <div key={q.question_id} style={{ marginBottom: "25px", padding: "10px", backgroundColor: "#fff", borderRadius: "6px" }}>
+          <p style={{ fontWeight: "bold" }}>Q{index + 1}: {renderWithMath(q.question_text)}</p>
 
           {(q.question_type === "MCQ" || q.question_type === "TRUE_FALSE") &&
             q.options.map((opt, i) => (
-              <label key={i}>
+              <label key={i} style={{ display: "block", margin: "5px 0" }}>
                 <input
                   type="radio"
                   name={`q-${q.question_id}`}
@@ -129,15 +137,14 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
                   onChange={() => handleChange(q.question_id, opt.text)}
                   checked={answers[q.question_id] === opt.text}
                 />
-                {renderWithMath(opt.text)}
-                <br />
+                {" "} {renderWithMath(opt.text)}
               </label>
             ))
           }
 
           {q.question_type === "MULTI_SELECT" &&
             q.options.map((opt, i) => (
-              <label key={i}>
+              <label key={i} style={{ display: "block", margin: "5px 0" }}>
                 <input
                   type="checkbox"
                   name={`q-${q.question_id}`}
@@ -156,8 +163,7 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
                     JSON.parse(answers[q.question_id]).includes(opt.text)
                   }
                 />
-                {renderWithMath(opt.text)}
-                <br />
+                {" "} {renderWithMath(opt.text)}
               </label>
             ))
           }
@@ -165,13 +171,39 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
       ))}
 
       {!submitted ? (
-        <button onClick={handleSubmit} disabled={submitting}>
+        <button
+          onClick={handleSubmit}
+          disabled={submitting}
+          style={{
+            padding: "10px 20px",
+            fontSize: "16px",
+            backgroundColor: submitting ? "#ccc" : "#28a745",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            cursor: submitting ? "not-allowed" : "pointer"
+          }}
+        >
           {submitting ? "Submitting..." : "Submit Quiz"}
         </button>
       ) : (
         <>
           <h3>Your Score: {score}</h3>
-          <button onClick={onBack}>⬅ Back to Home</button>
+          <button
+            onClick={onBack}
+            style={{
+              marginTop: "10px",
+              padding: "8px 16px",
+              fontSize: "14px",
+              backgroundColor: "#007bff",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer"
+            }}
+          >
+            ⬅ Back to Home
+          </button>
         </>
       )}
     </div>

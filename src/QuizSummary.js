@@ -31,7 +31,7 @@ const splitTextWithMath = (text) => {
   return parts;
 };
 
-// Renders mixed text and LaTeX using <math> blocks
+// Render mixed content with LaTeX
 const renderWithMath = (text) => {
   const parts = splitTextWithMath(text);
   return parts.map((part, idx) =>
@@ -68,25 +68,36 @@ export default function QuizSummary({ quizId, studentId, onBack }) {
   if (!summary) return <p>Loading summary...</p>;
 
   return (
-    <div style={{ maxWidth: "700px", margin: "auto" }}>
-      <button onClick={onBack}>⬅ Back</button>
-      <button onClick={downloadPDF} style={{ float: "right" }}>📄 Download PDF</button>
+    <div style={{ maxWidth: "800px", margin: "40px auto", padding: "20px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
+        <button onClick={onBack} style={{ padding: "8px 16px" }}>⬅ Back</button>
+        <button onClick={downloadPDF} style={{ padding: "8px 16px", backgroundColor: "#007bff", color: "white", border: "none", borderRadius: "5px" }}>📄 Download PDF</button>
+      </div>
 
-      <div ref={summaryRef} style={{ padding: "20px", backgroundColor: "#fff", marginTop: "20px" }}>
-        <h2>{summary.quiz_title}</h2>
+      <div ref={summaryRef} style={{ padding: "30px", backgroundColor: "#ffffff", borderRadius: "10px", boxShadow: "0 0 10px rgba(0,0,0,0.1)" }}>
+        <h2 style={{ marginBottom: "10px" }}>{summary.quiz_title}</h2>
         <p><strong>Your Score:</strong> {summary.your_score}/{summary.total_marks}</p>
         <p><strong>Students Attended:</strong> {summary.students_attended}</p>
         <p><strong>Average Marks:</strong> {summary.average_marks}</p>
         <p><strong>Median Marks:</strong> {summary.median_marks}</p>
 
-        <h3>Your Answers</h3>
-        <ul>
+        <h3 style={{ marginTop: "30px" }}>Your Answers</h3>
+        <ul style={{ listStyleType: "none", padding: 0 }}>
           {summary.answers.map((item, idx) => (
-            <li key={idx} style={{ marginBottom: "20px" }}>
-              <p><strong>Q:</strong> {renderWithMath(item.question)}</p>
+            <li
+              key={idx}
+              style={{
+                marginBottom: "20px",
+                padding: "15px",
+                backgroundColor: item.is_correct ? "#e6f9f0" : "#ffe6e6",
+                borderRadius: "8px",
+                border: "1px solid #ccc"
+              }}
+            >
+              <p><strong>Q{idx + 1}:</strong> {renderWithMath(item.question)}</p>
               <p><strong>Your Answer:</strong> {renderWithMath(item.your_answer)}</p>
               <p><strong>Correct Answer:</strong> {renderWithMath(item.correct_answer)}</p>
-              <p style={{ color: item.is_correct ? "green" : "red" }}>
+              <p style={{ fontWeight: "bold", color: item.is_correct ? "green" : "red" }}>
                 {item.is_correct ? "✔ Correct" : "✘ Incorrect"}
               </p>
               {item.feedback && (

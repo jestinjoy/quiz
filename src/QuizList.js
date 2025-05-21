@@ -10,30 +10,37 @@ export default function QuizList({ studentId, onSelectQuiz, onViewSummary }) {
 
   useEffect(() => {
     axios.get(`http://localhost:8000/list/${studentId}`)
-      .then(res => {
-        setQuizzes(res.data);
-      })
-      .catch(err => {
-        console.error("Failed to load quizzes", err);
-      });
+      .then(res => setQuizzes(res.data))
+      .catch(err => console.error("Failed to load quizzes", err));
   }, [studentId]);
 
-const renderQuizCard = (quiz, type) => (
-  <div
-    key={quiz.quiz_id}
-    style={{
-      border: "1px solid #ccc",
-      borderRadius: "8px",
-      padding: "12px",
-      marginBottom: "10px",
-      backgroundColor:
-        type === "completed" ? "#f0f0f0" :
-        type === "active" ? "#e7f7ed" :
-        "#fff7e7"
-    }}
-  >
-    <h4>{quiz.title}</h4>
-    <p><strong>Start:</strong> {new Date(quiz.start_time).toLocaleString("en-IN", {
+  const buttonStyle = (color) => ({
+    marginTop: "10px",
+    padding: "8px 16px",
+    fontSize: "14px",
+    backgroundColor: color === "green" ? "#28a745" : "#6c757d",
+    color: "white",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer"
+  });
+
+  const renderQuizCard = (quiz, type) => (
+    <div
+      key={quiz.quiz_id}
+      style={{
+        border: "1px solid #ccc",
+        borderRadius: "10px",
+        padding: "16px",
+        marginBottom: "16px",
+        backgroundColor:
+          type === "completed" ? "#f2f2f2" :
+          type === "active" ? "#e6f9f0" :
+          "#fff4e6"
+      }}
+    >
+      <h3 style={{ margin: "0 0 8px" }}>{quiz.title}</h3>
+      <p><strong>Start:</strong> {new Date(quiz.start_time).toLocaleString("en-IN", {
         timeZone: "Asia/Kolkata",
         hour12: true,
         year: "numeric",
@@ -42,38 +49,41 @@ const renderQuizCard = (quiz, type) => (
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit"
-    })}</p>
+      })}</p>
+      <p><strong>Duration:</strong> {quiz.duration_minutes} mins</p>
+      <p><strong>Total Marks:</strong> {quiz.total_marks}</p>
 
-    <p><strong>Duration:</strong> {quiz.duration_minutes} mins</p>
-    <p><strong>Marks:</strong> {quiz.total_marks}</p>
+      {quiz.score !== null && (
+        <p><strong>Your Score:</strong> {quiz.score} / {quiz.total_marks}</p>
+      )}
 
-    {quiz.status === "COMPLETED" && (
-      <>
-        {quiz.score !== null && (
-          <p><strong>Your Score:</strong> {quiz.score}</p>
-        )}
-        {quiz.position && (
-          <p><strong>Your Position:</strong> {quiz.position}</p>
-        )}
-        <button onClick={() => onViewSummary(quiz.quiz_id)}>
-          More
+      {quiz.status === "COMPLETED" && quiz.position && (
+        <p><strong>Your Position:</strong> {quiz.position}</p>
+      )}
+
+      {quiz.status === "COMPLETED" && (
+        <button
+          style={buttonStyle("gray")}
+          onClick={() => onViewSummary(quiz.quiz_id)}
+        >
+          📄 View Summary
         </button>
-      </>
-    )}
+      )}
 
-
-    {type === "active" && (
-      <button onClick={() => onSelectQuiz(quiz.quiz_id)}>
-        Start Quiz
-      </button>
-    )}
-  </div>
-);
-
+      {type === "active" && (
+        <button
+          style={buttonStyle("green")}
+          onClick={() => onSelectQuiz(quiz.quiz_id)}
+        >
+          ▶️ Start Quiz
+        </button>
+      )}
+    </div>
+  );
 
   return (
-    <div style={{ maxWidth: "600px", margin: "auto" }}>
-      <h2>Available Quizzes</h2>
+    <div style={{ maxWidth: "700px", margin: "auto", padding: "20px" }}>
+      <h2>📚 Available Quizzes</h2>
 
       <h3>🟢 Active</h3>
       {quizzes.active.length > 0 ? (
