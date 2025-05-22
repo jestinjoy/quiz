@@ -3,22 +3,22 @@ import { InlineMath } from "react-katex";
 import "katex/dist/katex.min.css";
 import axios from "axios";
 
-// Split text and math (<math>...</math>) blocks
-const splitTextWithMath = (text) => {
-  const regex = /<math>(.*?)<\/math>/gs;
+// Split text into plain, math, and code blocks
+const preprocessSegments = (text) => {
+  const regex = /<(math|code)>(.*?)<\/\1>/gs;
   let parts = [];
   let lastIndex = 0;
   const matches = [...text.matchAll(regex)];
 
   for (let match of matches) {
-    const [fullMatch, latexContent] = match;
+    const [fullMatch, tag, content] = match;
     const index = match.index;
 
     if (index > lastIndex) {
       parts.push({ type: "text", content: text.slice(lastIndex, index) });
     }
 
-    parts.push({ type: "math", content: latexContent });
+    parts.push({ type: tag, content });
     lastIndex = index + fullMatch.length;
   }
 
@@ -29,16 +29,36 @@ const splitTextWithMath = (text) => {
   return parts;
 };
 
-// Render mixed content with inline LaTeX
-const renderWithMath = (text) => {
-  const parts = splitTextWithMath(text);
-  return parts.map((part, idx) =>
-    part.type === "math" ? (
-      <InlineMath key={idx}>{part.content}</InlineMath>
-    ) : (
-      <span key={idx} style={{ whiteSpace: "pre-wrap" }}>{part.content}</span>
-    )
-  );
+// Render plain, math, and code blocks
+const renderWithSegments = (text) => {
+  const parts = preprocessSegments(text);
+  return parts.map((part, index) => {
+    if (part.type === "math") {
+      return <InlineMath key={index}>{part.content}</InlineMath>;
+    } else if (part.type === "code") {
+      return (
+        <pre
+          key={index}
+          style={{
+            background: "#f4f4f4",
+            padding: "8px",
+            margin: "5px 0",
+            borderRadius: "4px",
+            whiteSpace: "pre-wrap",
+            fontFamily: "monospace"
+          }}
+        >
+          <code>{part.content}</code>
+        </pre>
+      );
+    } else {
+      return (
+        <span key={index} style={{ whiteSpace: "pre-wrap" }}>
+          {part.content}
+        </span>
+      );
+    }
+  });
 };
 
 export default function QuizAttempt({ quizId, studentId, onBack }) {
@@ -69,12 +89,13 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
   }, [submitted, submitting, quizId, studentId, answers]);
 
   useEffect(() => {
-    axios.get(`http://localhost:8000/quiz/${quizId}/questions`)
-      .then(res => {
+    axios
+      .get(`http://localhost:8000/quiz/${quizId}/questions`)
+      .then((res) => {
         setQuiz(res.data);
         setTimeLeft(res.data.duration_minutes * 60);
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("Failed to load quiz", err);
       });
   }, [quizId]);
@@ -83,10 +104,10 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
     if (!quiz || submitted) return;
 
     const interval = setInterval(() => {
-      setTimeLeft(prev => {
+      setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          handleSubmit(); // auto-submit
+          handleSubmit();
           return 0;
         }
         return prev - 1;
@@ -97,8 +118,8 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
   }, [quiz, submitted, handleSubmit]);
 
   const formatTime = (secs) => {
-    const m = String(Math.floor(secs / 60)).padStart(2, '0');
-    const s = String(secs % 60).padStart(2, '0');
+    const m = String(Math.floor(secs / 60)).padStart(2, "0");
+    const s = String(secs % 60).padStart(2, "0");
     return `${m}:${s}`;
   };
 
@@ -109,23 +130,41 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
   if (!quiz) return <p>Loading quiz...</p>;
 
   return (
-    <div style={{
-      maxWidth: "700px",
-      margin: "auto",
-      padding: "20px",
-      fontFamily: "sans-serif",
-      backgroundColor: "#f9f9f9",
-      borderRadius: "10px",
-      boxShadow: "0 0 10px rgba(0,0,0,0.1)"
-    }}>
+    <div
+      style={{
+        maxWidth: "700px",
+        margin: "auto",
+        padding: "20px",
+        fontFamily: "sans-serif",
+        backgroundColor: "#f9f9f9",
+        borderRadius: "10px",
+        boxShadow: "0 0 10px rgba(0,0,0,0.1)"
+      }}
+    >
       <h2 style={{ textAlign: "center" }}>{quiz.title}</h2>
-      <p><strong>Time Left:</strong> {formatTime(timeLeft)}</p>
-      <p><strong>Duration:</strong> {quiz.duration_minutes} minutes</p>
-      <p><strong>Total Marks:</strong> {quiz.total_marks}</p>
+      <p>
+        <strong>Time Left:</strong> {formatTime(timeLeft)}
+      </p>
+      <p>
+        <strong>Duration:</strong> {quiz.duration_minutes} minutes
+      </p>
+      <p>
+        <strong>Total Marks:</strong> {quiz.total_marks}
+      </p>
 
       {quiz.questions.map((q, index) => (
-        <div key={q.question_id} style={{ marginBottom: "25px", padding: "10px", backgroundColor: "#fff", borderRadius: "6px" }}>
-          <p style={{ fontWeight: "bold" }}>Q{index + 1}: {renderWithMath(q.question_text)}</p>
+        <div
+          key={q.question_id}
+          style={{
+            marginBottom: "25px",
+            padding: "10px",
+            backgroundColor: "#fff",
+            borderRadius: "6px"
+          }}
+        >
+          <p style={{ fontWeight: "bold" }}>
+            Q{index + 1}: {renderWithSegments(q.question_text)}
+          </p>
 
           {(q.question_type === "MCQ" || q.question_type === "TRUE_FALSE") &&
             q.options.map((opt, i) => (
@@ -136,11 +175,10 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
                   value={opt.text}
                   onChange={() => handleChange(q.question_id, opt.text)}
                   checked={answers[q.question_id] === opt.text}
-                />
-                {" "} {renderWithMath(opt.text)}
+                />{" "}
+                {renderWithSegments(opt.text)}
               </label>
-            ))
-          }
+            ))}
 
           {q.question_type === "MULTI_SELECT" &&
             q.options.map((opt, i) => (
@@ -155,18 +193,17 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
                       : [];
                     const newVal = e.target.checked
                       ? [...prev, opt.text]
-                      : prev.filter(v => v !== opt.text);
+                      : prev.filter((v) => v !== opt.text);
                     handleChange(q.question_id, JSON.stringify(newVal));
                   }}
                   checked={
                     answers[q.question_id] &&
                     JSON.parse(answers[q.question_id]).includes(opt.text)
                   }
-                />
-                {" "} {renderWithMath(opt.text)}
+                />{" "}
+                {renderWithSegments(opt.text)}
               </label>
-            ))
-          }
+            ))}
         </div>
       ))}
 

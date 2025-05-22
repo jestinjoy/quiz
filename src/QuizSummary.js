@@ -5,22 +5,22 @@ import html2canvas from "html2canvas";
 import { InlineMath } from "react-katex";
 import "katex/dist/katex.min.css";
 
-// Utility to split mixed text and math blocks
-const splitTextWithMath = (text) => {
-  const regex = /<math>(.*?)<\/math>/gs;
+// Split plain text, math, and code blocks
+const preprocessSegments = (text) => {
+  const regex = /<(math|code)>(.*?)<\/\1>/gs;
   let parts = [];
   let lastIndex = 0;
   const matches = [...text.matchAll(regex)];
 
   for (let match of matches) {
-    const [fullMatch, latexContent] = match;
+    const [fullMatch, tag, content] = match;
     const index = match.index;
 
     if (index > lastIndex) {
       parts.push({ type: "text", content: text.slice(lastIndex, index) });
     }
 
-    parts.push({ type: "math", content: latexContent });
+    parts.push({ type: tag, content });
     lastIndex = index + fullMatch.length;
   }
 
@@ -31,16 +31,35 @@ const splitTextWithMath = (text) => {
   return parts;
 };
 
-// Render mixed content with LaTeX
-const renderWithMath = (text) => {
-  const parts = splitTextWithMath(text);
-  return parts.map((part, idx) =>
-    part.type === "math" ? (
-      <InlineMath key={idx}>{part.content}</InlineMath>
-    ) : (
-      <span key={idx} style={{ whiteSpace: "pre-wrap" }}>{part.content}</span>
-    )
-  );
+// Render mixed segments
+const renderWithSegments = (text) => {
+  const parts = preprocessSegments(text);
+  return parts.map((part, idx) => {
+    if (part.type === "math") {
+      return <InlineMath key={idx}>{part.content}</InlineMath>;
+    } else if (part.type === "code") {
+      return (
+        <pre
+          key={idx}
+          style={{
+            background: "#f4f4f4",
+            padding: "8px",
+            borderRadius: "4px",
+            fontFamily: "monospace",
+            whiteSpace: "pre-wrap"
+          }}
+        >
+          <code>{part.content}</code>
+        </pre>
+      );
+    } else {
+      return (
+        <span key={idx} style={{ whiteSpace: "pre-wrap" }}>
+          {part.content}
+        </span>
+      );
+    }
+  });
 };
 
 export default function QuizSummary({ quizId, studentId, onBack }) {
@@ -48,61 +67,110 @@ export default function QuizSummary({ quizId, studentId, onBack }) {
   const summaryRef = useRef();
 
   useEffect(() => {
-    axios.get(`http://localhost:8000/quiz/${quizId}/summary/${studentId}`)
-      .then(res => setSummary(res.data))
-      .catch(err => console.error("Error loading quiz summary", err));
+    axios
+      .get(`http://localhost:8000/quiz/${quizId}/summary/${studentId}`)
+      .then((res) => setSummary(res.data))
+      .catch((err) => console.error("Error loading quiz summary", err));
   }, [quizId, studentId]);
 
-  const downloadPDF = async () => {
-    const input = summaryRef.current;
-    const canvas = await html2canvas(input, { scale: 2 });
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF("p", "mm", "a4");
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`${summary.quiz_title.replace(/\s+/g, "_")}_summary.pdf`);
-  };
+const downloadPDF = async () => {
+  const input = summaryRef.current;
+
+  const canvas = await html2canvas(input, { scale: 2 });
+  const imgData = canvas.toDataURL("image/png");
+
+  const pdf = new jsPDF("p", "mm", "a4");
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = pdf.internal.pageSize.getHeight();
+
+  const imgProps = pdf.getImageProperties(imgData);
+  const imgWidth = pdfWidth;
+  const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+  let heightLeft = imgHeight;
+  let position = 0;
+
+  pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+  heightLeft -= pdfHeight;
+
+  while (heightLeft > 0) {
+    position = heightLeft - imgHeight;
+    pdf.addPage();
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pdfHeight;
+  }
+
+  const fileName = `${summary.quiz_title.replace(/\s+/g, "_")}_summary.pdf`;
+  pdf.save(fileName);
+};
+
 
   if (!summary) return <p>Loading summary...</p>;
 
   return (
-    <div style={{ maxWidth: "800px", margin: "40px auto", padding: "20px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
-        <button onClick={onBack} style={{ padding: "8px 16px" }}>⬅ Back</button>
-        <button onClick={downloadPDF} style={{ padding: "8px 16px", backgroundColor: "#007bff", color: "white", border: "none", borderRadius: "5px" }}>📄 Download PDF</button>
-      </div>
+    <div style={{ maxWidth: "800px", margin: "auto", padding: "20px" }}>
+      <button onClick={onBack}>⬅ Back</button>
+      <button onClick={downloadPDF} style={{ float: "right" }}>
+        📄 Download PDF
+      </button>
 
-      <div ref={summaryRef} style={{ padding: "30px", backgroundColor: "#ffffff", borderRadius: "10px", boxShadow: "0 0 10px rgba(0,0,0,0.1)" }}>
-        <h2 style={{ marginBottom: "10px" }}>{summary.quiz_title}</h2>
-        <p><strong>Your Score:</strong> {summary.your_score}/{summary.total_marks}</p>
-        <p><strong>Students Attended:</strong> {summary.students_attended}</p>
-        <p><strong>Average Marks:</strong> {summary.average_marks}</p>
-        <p><strong>Median Marks:</strong> {summary.median_marks}</p>
+      <div
+        ref={summaryRef}
+        style={{
+          backgroundColor: "#fff",
+          padding: "20px",
+          borderRadius: "10px",
+          marginTop: "20px",
+          boxShadow: "0 0 10px rgba(0,0,0,0.1)"
+        }}
+      >
+        <h2 style={{ textAlign: "center" }}>{summary.quiz_title}</h2>
+        <p>
+          <strong>Your Score:</strong> {summary.your_score} / {summary.total_marks}
+        </p>
+        <p>
+          <strong>Students Attended:</strong> {summary.students_attended}
+        </p>
+        <p>
+          <strong>Average Marks:</strong> {summary.average_marks}
+        </p>
+        <p>
+          <strong>Median Marks:</strong> {summary.median_marks}
+        </p>
 
         <h3 style={{ marginTop: "30px" }}>Your Answers</h3>
-        <ul style={{ listStyleType: "none", padding: 0 }}>
+        <ul style={{ listStyle: "none", padding: 0 }}>
           {summary.answers.map((item, idx) => (
             <li
               key={idx}
               style={{
-                marginBottom: "20px",
-                padding: "15px",
-                backgroundColor: item.is_correct ? "#e6f9f0" : "#ffe6e6",
+                backgroundColor: "#f8f9fa",
+                padding: "16px",
+                marginBottom: "16px",
                 borderRadius: "8px",
-                border: "1px solid #ccc"
+                borderLeft: item.is_correct ? "6px solid green" : "6px solid red"
               }}
             >
-              <p><strong>Q{idx + 1}:</strong> {renderWithMath(item.question)}</p>
-              <p><strong>Your Answer:</strong> {renderWithMath(item.your_answer)}</p>
-              <p><strong>Correct Answer:</strong> {renderWithMath(item.correct_answer)}</p>
-              <p style={{ fontWeight: "bold", color: item.is_correct ? "green" : "red" }}>
+              <p>
+                <strong>Q{idx + 1}:</strong> {renderWithSegments(item.question)}
+              </p>
+              <p>
+                <strong>Your Answer:</strong> {renderWithSegments(item.your_answer)}
+              </p>
+              <p>
+                <strong>Correct Answer:</strong> {renderWithSegments(item.correct_answer)}
+              </p>
+              <p
+                style={{
+                  fontWeight: "bold",
+                  color: item.is_correct ? "green" : "red"
+                }}
+              >
                 {item.is_correct ? "✔ Correct" : "✘ Incorrect"}
               </p>
               {item.feedback && (
                 <p style={{ fontStyle: "italic", color: "#555" }}>
-                  <strong>Feedback:</strong> {item.feedback}
+                  <strong>Feedback:</strong> {renderWithSegments(item.feedback)}
                 </p>
               )}
             </li>
