@@ -75,33 +75,25 @@ export default function QuizSummary({ quizId, studentId, onBack }) {
 
 const downloadPDF = async () => {
   const input = summaryRef.current;
-
   const canvas = await html2canvas(input, { scale: 2 });
   const imgData = canvas.toDataURL("image/png");
 
   const pdf = new jsPDF("p", "mm", "a4");
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = pdf.internal.pageSize.getHeight();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const pageWidth = pdf.internal.pageSize.getWidth();
 
   const imgProps = pdf.getImageProperties(imgData);
-  const imgWidth = pdfWidth;
-  const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+  const imgHeight = (imgProps.height * pageWidth) / imgProps.width;
 
-  let heightLeft = imgHeight;
   let position = 0;
 
-  pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-  heightLeft -= pdfHeight;
-
-  while (heightLeft > 0) {
-    position = heightLeft - imgHeight;
-    pdf.addPage();
-    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-    heightLeft -= pdfHeight;
+  while (position < imgHeight) {
+    pdf.addImage(imgData, "PNG", 0, -position, pageWidth, imgHeight);
+    position += pageHeight;
+    if (position < imgHeight) pdf.addPage();
   }
 
-  const fileName = `${summary.quiz_title.replace(/\s+/g, "_")}_summary.pdf`;
-  pdf.save(fileName);
+  pdf.save(`${summary.quiz_title.replace(/\s+/g, "_")}_summary.pdf`);
 };
 
 

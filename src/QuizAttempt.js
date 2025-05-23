@@ -90,7 +90,7 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
 
   useEffect(() => {
     axios
-      .get(`http://localhost:8000/quiz/${quizId}/questions`)
+      .get(`http://localhost:8000/quiz/${quizId}/questions/${studentId}`)
       .then((res) => {
         setQuiz(res.data);
         setTimeLeft(res.data.duration_minutes * 60);
@@ -98,7 +98,8 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
       .catch((err) => {
         console.error("Failed to load quiz", err);
       });
-  }, [quizId]);
+  }, [quizId, studentId]);
+
 
   useEffect(() => {
     if (!quiz || submitted) return;
