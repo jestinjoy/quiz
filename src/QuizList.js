@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
+const API_BASE = window.location.hostname === "localhost"
+  ? "http://localhost:8000"
+  : process.env.REACT_APP_SERVER_IP;
+
+
+
 export default function QuizList({ studentId, onSelectQuiz, onViewSummary }) {
   const [quizzes, setQuizzes] = useState({
     active: [],
@@ -9,14 +15,14 @@ export default function QuizList({ studentId, onSelectQuiz, onViewSummary }) {
   });
 
   useEffect(() => {
-    axios.get(`http://localhost:8000/list/${studentId}`)
+    axios.get(`${API_BASE}/list/${studentId}`)
       .then(res => setQuizzes(res.data))
       .catch(err => console.error("Failed to load quizzes", err));
   }, [studentId]);
 
   const startAndSelectQuiz = async (quizId) => {
     try {
-      await axios.post(`http://localhost:8000/start_quiz/${quizId}/${studentId}`);
+      await axios.post(`${API_BASE}/start_quiz/${quizId}/${studentId}`);
       onSelectQuiz(quizId);
     } catch (err) {
       alert("Failed to start quiz");

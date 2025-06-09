@@ -3,6 +3,12 @@ import { InlineMath } from "react-katex";
 import "katex/dist/katex.min.css";
 import axios from "axios";
 
+const API_BASE = window.location.hostname === "localhost"
+  ? "http://localhost:8000"
+  : process.env.REACT_APP_SERVER_IP;
+
+
+
 // Split text into plain, math, and code blocks
 const preprocessSegments = (text) => {
   const regex = /<(math|code)>(.*?)<\/\1>/gs;
@@ -74,7 +80,8 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
 
     setSubmitting(true);
     try {
-      const res = await axios.post("http://localhost:8000/submit_quiz", {
+      const res = await axios.post(`${API_BASE}/submit_quiz`,
+ {
         quiz_id: quizId,
         student_id: studentId,
         answers: answers
@@ -90,7 +97,7 @@ export default function QuizAttempt({ quizId, studentId, onBack }) {
 
   useEffect(() => {
     axios
-      .get(`http://localhost:8000/quiz/${quizId}/questions/${studentId}`)
+      .get(`${API_BASE}/quiz/${quizId}/questions/${studentId}`)
       .then((res) => {
         setQuiz(res.data);
         setTimeLeft(res.data.duration_minutes * 60);

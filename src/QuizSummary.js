@@ -5,6 +5,11 @@ import html2canvas from "html2canvas";
 import { InlineMath } from "react-katex";
 import "katex/dist/katex.min.css";
 
+const API_BASE = window.location.hostname === "localhost"
+  ? "http://localhost:8000"
+  : process.env.REACT_APP_SERVER_IP;
+
+
 // Split plain text, math, and code blocks
 const preprocessSegments = (text) => {
   const regex = /<(math|code)>(.*?)<\/\1>/gs;
@@ -68,7 +73,8 @@ export default function QuizSummary({ quizId, studentId, onBack }) {
 
   useEffect(() => {
     axios
-      .get(`http://localhost:8000/quiz/${quizId}/summary/${studentId}`)
+  .get(`${API_BASE}/quiz/${quizId}/summary/${studentId}`)
+
       .then((res) => setSummary(res.data))
       .catch((err) => console.error("Error loading quiz summary", err));
   }, [quizId, studentId]);
